@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="th"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Manrope:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries">
+    let imageBase64 = "";
+    const defaultHeaderImage = "https://lh3.googleusercontent.com/aida/ADBb0ui2hWGRhlkulhwZr2jP2azK-Jhcb_WQE3A9n_w08pUSx5cpUVE-6ALFe2Ud3TaKy7OjAbNP9NaFYL9qImayJGUZmO3qhTTADEshCqs0Y-r-wFbCmekK_Ro3UJ-sngRRMYgeHVlXAUdIhO_UTOOiWyJ46FV10gJb3Z5076bFd1YED_AF2NOs4wMHM_UMVixV_k3uYWGZCTnz1a0ZuklRis46wsoaYtka7V1_4YzJTf57YT7ZweHpGLwNf1XH2n4NQ_S0_Etn9FC7fg";
+
+    let currentUserId = localStorage.getItem("tk2_current_session_id");
+    if (!currentUserId) {
+        currentUserId = 'user_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem("tk2_current_session_id", currentUserId);
+    }
+
+    document.getElementById("avatarInput").addEventListener("change", function(e){
+        const file = e.target.files[0];
+        if(!file) return;
+        if(!file.type.startsWith("image/")){
+            alert("กรุณาเลือกไฟล์รูปภาพ!");
+            return;
+        }
+        document.getElementById("fileName").textContent = file.name;
+        const reader = new FileReader();
+        reader.onload = function(){
+            imageBase64 = reader.result;
+            document.getElementById("preview").src = imageBase64;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    function loadUsers(){
+        const users = JSON.parse(localStorage.getItem("tk2_users")) || [];
+        const list = document.getElementById("userList");
+        const count = document.getElementById("countUser");
+        const emptyState = document.getElementById("emptyState");
+        
+        list.innerHTML = "";
+        
+        if(users.length === 0) {
+            list.appendChild(emptyState);
+            emptyState.style.display = "block";
+        } else {
+            emptyState.style.display = "none";
+            users.forEach(user => {
+                const isOwnEntry = user.sessionId === currentUserId;
+                const card = document.createElement("div");
+                
+                card.className = "flex items-center gap-4 p-4 bg-[#11111a] border-l-[4px] border-red-600 rounded-r-2xl rounded-l-sm animate-fade-in shadow-[0_10px_30px_rgba(0,0,0,0.5)] backdrop-blur-md relative overflow-hidden group border border-gray-800/40 hover:border-red-600/30 transition-all duration-300";
+                
+                card.innerHTML = `
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-red-600/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-red-600/10 transition-colors"></div>
+<div class="relative flex-shrink-0">
+<img class="w-14 h-14 rounded-full object-cover border-2 border-gray-800 group-hover:border-red-600/40 transition-colors shadow-lg" src="${user.image || defaultHeaderImage}"/>
+<div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-[3px] border-[#0d0d15]"></div>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-bold text-gray-100 text-[16px] truncate heading-font tracking-tight mb-0.5">${user.discord}</p>
+<div class="flex items-center gap-2">
+<span class="text-[9px] bg-red-950/40 text-red-400 px-1.5 py-0.5 rounded-sm border border-red-900/20 font-black uppercase tracking-widest flex items-center gap-1">MEMBER</span>
+<p class="text-[13px] text-gray-400 font-medium truncate opacity-70 tracking-wide font-body">${user.nickname} • ${user.age} ปี</p>
+</div>
+</div>
+                    ${isOwnEntry ? `
+                    <div class="flex gap-1 z-10">
+<button class="p-2 text-gray-500 hover:text-[#7c4dff] transition-colors active:scale-90" onclick="editUser('${user.id}')">
+<span class="material-symbols-outlined text-[20px]">edit_square</span>
+</button>
+<button class="p-2 text-gray-500 hover:text-red-500 transition-colors active:scale-90" onclick="deleteUser('${user.id}')">
+<span class="material-symbols-outlined text-[20px]">delete_forever</span>
+</button>
+</div>
+                    ` : ''}
+                `;
+                list.appendChild(card);
+            });
+        }
+        if (count) count.textContent = users.length;
+    }
+
+    window.editUser = function(id) {
+        const users = JSON.parse(localStorage.getItem("tk2_users")) || [];
+        const user = users.find(u => u.id === id);
+        if (user && user.sessionId === currentUserId) {
+            document.getElementById("userId").value = user.id;
+            document.getElementById("discord").value = user.discord;
+            document.getElementById("nickname").value = user.nickname;
+            document.getElementById("age").value = user.age;
+            document.getElementById("preview").src = user.image;
+            imageBase64 = user.image;
+            document.getElementById("btnText").textContent = "อัปเดตข้อมูล ⚡";
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
+    window.deleteUser = function(id) {
+        let users = JSON.parse(localStorage.getItem("tk2_users")) || [];
+        const user = users.find(u => u.id === id);
+        if (user && user.sessionId === currentUserId) {
+            if(confirm("ยืนยันการลบข้อมูลของคุณ?")) {
+                users = users.filter(u => u.id !== id);
+                localStorage.setItem("tk2_users", JSON.stringify(users));
+                loadUsers();
+            }
+        }
+    };
+
+    document.getElementById("saveBtn").addEventListener("click", function(){
+        const idInput = document.getElementById("userId");
+        const discord = document.getElementById("discord").value.trim();
+        const nickname = document.getElementById("nickname").value.trim();
+        const age = document.getElementById("age").value;
+        
+        if(!discord || !nickname || !age){
+            alert("กรุณากรอกข้อมูลให้ครบถ้วน!");
+            return;
+        }
+        
+        let users = JSON.parse(localStorage.getItem("tk2_users")) || [];
+        
+        if(idInput.value) {
+            const index = users.findIndex(u => u.id === idInput.value);
+            if(index !== -1 && users[index].sessionId === currentUserId) {
+                users[index] = {
+                    ...users[index],
+                    discord,
+                    nickname,
+                    age,
+                    image: imageBase64 || users[index].image || defaultHeaderImage
+                };
+            }
+        } else {
+            const existingIndex = users.findIndex(u => u.sessionId === currentUserId);
+            if (existingIndex !== -1) {
+                if(!confirm("คุณมีชื่อในระบบอยู่แล้ว ต้องการบันทึกข้อมูลใหม่แทนที่ข้อมูลเดิมใช่ไหม?")) return;
+                users.splice(existingIndex, 1);
+            }
+            
+            users.unshift({
+                id: Date.now().toString(),
+                sessionId: currentUserId,
+                discord,
+                nickname,
+                age,
+                image: imageBase64 || defaultHeaderImage
+            });
+        }
+        
+        localStorage.setItem("tk2_users", JSON.stringify(users));
+        loadUsers();
+        
+        idInput.value = "";
+        document.getElementById("discord").value = "";
+        document.getElementById("nickname").value = "";
+        document.getElementById("age").value = "";
+        document.getElementById("fileName").textContent = "ยังไม่ได้เลือกไฟล์";
+        document.getElementById("preview").src = defaultHeaderImage;
+        document.getElementById("btnText").textContent = "บันทึกข้อมูล ⚡";
+        imageBase64 = "";
+        
+        const btn = this;
+        const originalContent = btn.innerHTML;
+        btn.innerHTML = "สำเร็จ! ✓";
+        btn.classList.replace("bg-[#7c4dff]", "bg-green-600");
+        setTimeout(() => {
+            btn.innerHTML = originalContent;
+            btn.classList.replace("bg-green-600", "bg-[#7c4dff]");
+        }, 2000);
+    });
+
+    window.filterUsers = function() {
+        const searchTerm = document.getElementById("searchInput").value.toLowerCase();
+        const users = JSON.parse(localStorage.getItem("tk2_users")) || [];
+        const list = document.getElementById("userList");
+        const cards = Array.from(list.children).filter(c => c.id !== "emptyState");
+
+        let hasResults = false;
+        
+        cards.forEach((card, index) => {
+            const user = users[index];
+            if (!user) return;
+
+            const match = user.discord.toLowerCase().includes(searchTerm) || 
+                          user.nickname.toLowerCase().includes(searchTerm);
+            
+            if (match) {
+                card.style.display = "flex";
+                hasResults = true;
+            } else {
+                card.style.display = "none";
+            }
+        });
+
+        const emptyState = document.getElementById("emptyState");
+        if (!hasResults && users.length > 0) {
+            emptyState.style.display = "block";
+            emptyState.querySelector('h3').textContent = "ไม่พบข้อมูลที่ค้นหา";
+            emptyState.querySelector('p').textContent = "ลองพิมพ์ชื่ออื่น หรือตรวจสอบตัวสะกด";
+        } else if (users.length === 0) {
+            emptyState.style.display = "block";
+            emptyState.querySelector('h3').textContent = "ยังไม่มีสมาชิกเช็คชื่อ";
+            emptyState.querySelector('p').textContent = "ร่วมเป็นส่วนหนึ่งของเซิร์ฟเวอร์โดยการลงทะเบียนด้านบน";
+        } else {
+            emptyState.style.display = "none";
+        }
+    };
+
+    loadUsers();
+</script>
+<style>
+        :root {
+            --font-heading: 'Space Grotesk', sans-serif;
+            --font-body: 'Manrope', sans-serif;
+        }
+        body {
+            font-family: var(--font-body);
+            background-color: #0d0d15;
+            color: #efecf8;
+            position: relative;
+            overflow-x: hidden;
+            letter-spacing: 0.02em;
+        }
+        h1, h2, h3, .heading-font {
+            font-family: var(--font-heading);
+            letter-spacing: -0.01em;
+        }
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(10px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+        .animate-fade-in { animation: fade-in 0.4s ease; }
+        .glow-purple {
+            text-shadow: 0 0 20px rgba(124, 77, 255, 0.4);
+        }
+        .glow-red {
+            text-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+        }
+        .bg-glow {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle, rgba(124, 77, 255, 0.04) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0d0d15;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #7c4dff;
+            border-radius: 10px;
+        }
+        input::placeholder {
+            color: #4b5563;
+            font-weight: 400;
+            letter-spacing: 0.02em;
+        }
+        .label-style {
+            font-size: 13px;
+            font-weight: 600;
+            color: #9ca3af;
+            letter-spacing: 0.025em;
+        }
+    </style>
+</head>
+<body class="p-6 max-w-md mx-auto min-h-screen">
+<div class="bg-glow"></div>
+<!-- HEADER -->
+<div class="text-center mb-10 pt-4">
+<div class="flex justify-center mb-8">
+<div class="relative group">
+<div class="w-36 h-36 rounded-full p-1 bg-gradient-to-tr from-[#7c4dff] via-[#9d7aff] to-[#7c4dff] shadow-[0_0_40px_rgba(124,77,255,0.4)] overflow-hidden transition-transform duration-500 group-hover:scale-105">
+<img class="w-full h-full rounded-full object-cover border-4 border-[#0d0d15]" id="preview" src="https://lh3.googleusercontent.com/aida/ADBb0ui2hWGRhlkulhwZr2jP2azK-Jhcb_WQE3A9n_w08pUSx5cpUVE-6ALFe2Ud3TaKy7OjAbNP9NaFYL9qImayJGUZmO3qhTTADEshCqs0Y-r-wFbCmekK_Ro3UJ-sngRRMYgeHVlXAUdIhO_UTOOiWyJ46FV10gJb3Z5076bFd1YED_AF2NOs4wMHM_UMVixV_k3uYWGZCTnz1a0ZuklRis46wsoaYtka7V1_4YzJTf57YT7ZweHpGLwNf1XH2n4NQ_S0_Etn9FC7fg"/>
+</div>
+</div>
+</div>
+<h1 class="text-[32px] font-bold glow-purple tracking-tight leading-tight mb-2">🎮 เช็คชื่อเซิร์ฟเวอร์ <span class="text-[#7c4dff] drop-shadow-[0_0_15px_rgba(124,77,255,0.6)]">TK 2</span></h1>
+<p class="text-[14px] text-gray-400 font-medium opacity-70 tracking-wide">ระบบเช็คชื่อสมาชิก</p>
+</div>
+<!-- Upload Section -->
+<div class="mb-8">
+<label class="block label-style mb-4 ml-1">อัปโหลดรูปโปรไฟล์</label>
+<div class="flex items-center gap-4">
+<label class="cursor-pointer bg-[#7c4dff] hover:bg-[#6a3de8] text-white text-[14px] font-bold py-2.5 px-6 rounded-xl transition-all active:scale-95 shadow-lg shadow-purple-900/30" for="avatarInput">
+            เลือกไฟล์
+        </label>
+<input accept="image/*" class="hidden" id="avatarInput" type="file"/>
+<span class="text-[13px] text-gray-500 font-medium italic truncate max-w-[180px]" id="fileName">ยังไม่ได้เลือกไฟล์</span>
+</div>
+</div>
+<!-- Form -->
+<div class="space-y-6 mb-10">
+<div>
+<label class="block label-style mb-5 ml-1">ข้อมูลสมาชิก</label>
+<div class="space-y-5">
+<input id="userId" type="hidden"/>
+<div>
+<label class="block text-[13px] font-bold text-gray-400 mb-2 ml-1 flex items-center gap-2">
+<span class="text-[#3b82f6]">👤</span> ชื่อ DISCORD
+                </label>
+<input class="w-full p-4 rounded-xl bg-[#11111a] border border-gray-800/60 text-white placeholder-gray-600 focus:border-[#7c4dff] focus:ring-1 focus:ring-[#7c4dff] focus:outline-none transition-all duration-300 font-medium tracking-wide" id="discord" placeholder="เช่น Discord#0000" type="text"/>
+</div>
+<div>
+<label class="block text-[13px] font-bold text-gray-400 mb-2 ml-1 flex items-center gap-2">
+<span class="text-[#f59e0b]">🏷️</span> ชื่อเล่น
+                </label>
+<input class="w-full p-4 rounded-xl bg-[#11111a] border border-gray-800/60 text-white placeholder-gray-600 focus:border-[#7c4dff] focus:ring-1 focus:ring-[#7c4dff] focus:outline-none transition-all duration-300 font-medium tracking-wide" id="nickname" placeholder="ระบุชื่อเล่นของคุณ" type="text"/>
+</div>
+<div>
+<label class="block text-[13px] font-bold text-gray-400 mb-2 ml-1 flex items-center gap-2">
+<span class="text-[#ef4444]">🎂</span> อายุ
+                </label>
+<input class="w-full p-4 rounded-xl bg-[#11111a] border border-gray-800/60 text-white placeholder-gray-600 focus:border-[#7c4dff] focus:ring-1 focus:ring-[#7c4dff] focus:outline-none transition-all duration-300 font-medium tracking-wide" id="age" placeholder="ระบุอายุ" type="number"/>
+</div>
+</div>
+</div>
+</div>
+<div class="hidden mb-12 animate-fade-in" id="alreadyCheckedIn">
+<div class="bg-gradient-to-br from-[#1a1135] to-[#0d0d15] border border-[#7c4dff]/30 rounded-2xl p-8 text-center shadow-[0_0_30px_rgba(124,77,255,0.15)] relative overflow-hidden group">
+<div class="absolute inset-0 bg-gradient-to-r from-transparent via-[#7c4dff]/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+<div class="relative z-10">
+<div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#7c4dff]/10 mb-4 border border-[#7c4dff]/20">
+<span class="material-symbols-outlined text-[#7c4dff] text-3xl">verified</span>
+</div>
+<h3 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#7c4dff] via-[#f472b6] to-[#7c4dff] glow-purple heading-font mb-2 animate-pulse">
+                คุณเช็คชื่อเสร็จเรียบร้อยแล้ว
+            </h3>
+<p class="text-gray-400 text-sm font-medium">ขอบคุณที่ร่วมเป็นส่วนหนึ่งของครอบครัว TK 2</p>
+</div>
+</div>
+</div><button class="w-full bg-[#7c4dff] hover:bg-[#6a3de8] active:scale-[0.98] transition-all py-3 rounded-2xl font-bold text-[16px] text-white shadow-xl shadow-purple-900/30 flex items-center justify-center gap-2 mb-12 heading-font" id="saveBtn">
+<span id="btnText">บันทึกข้อมูล ⚡</span>
+</button>
+<!-- Search Bar -->
+<div class="mb-8 relative group">
+<div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-gray-500 group-focus-within:text-[#7c4dff] transition-colors text-[20px]">search</span>
+</div>
+<input class="w-full pl-12 pr-4 py-4 rounded-xl bg-[#0d0d15] border border-gray-800/50 text-white placeholder-gray-600 focus:border-[#7c4dff] focus:ring-1 focus:ring-[#7c4dff] focus:outline-none transition-all duration-300 font-medium text-[14px] tracking-wide" id="searchInput" onkeyup="filterUsers()" placeholder="ค้นหาชื่อสมาชิก..." type="text"/>
+</div>
+<!-- List Header -->
+<div class="flex items-center justify-between mb-8 pb-4 border-b border-gray-800/30">
+<h2 class="text-2xl font-bold flex items-center gap-3 heading-font">
+<span class="w-1.5 h-7 bg-red-600 rounded-full"></span>
+        รายชื่อสมาชิก ✨
+    </h2>
+<div class="flex items-center gap-2 bg-gray-900/40 px-4 py-2 rounded-full border border-gray-800/50">
+<span class="text-[11px] text-gray-500 font-bold uppercase tracking-wider">สมาชิก</span>
+<span class="text-[16px] font-bold text-red-500 leading-none" id="countUser">0</span>
+<span class="text-[11px] text-gray-500 font-bold uppercase tracking-wider">คน</span>
+</div>
+</div>
+<!-- User List Container -->
+<div class="space-y-4 pb-20" id="userList">
+<!-- Empty State -->
+<div class="text-center py-20 opacity-30 flex flex-col items-center" id="emptyState">
+<div class="flex flex-col items-center justify-center py-16 px-4 border-2 border-dashed border-gray-800/40 rounded-3xl bg-gray-900/10">
+<span class="material-symbols-outlined text-7xl text-gray-700 mb-4">group_off</span>
+<h3 class="text-lg font-bold text-gray-400 heading-font mb-1">ยังไม่มีสมาชิกเช็คชื่อ</h3>
+<p class="text-sm text-gray-600 font-medium text-center">ร่วมเป็นส่วนหนึ่งของเซิร์ฟเวอร์โดยการลงทะเบียนด้านบน</p>
+</div>
+</div>
+</div>
+<script>
+    let imageBase64 = "";
+    const defaultHeaderImage = "https://lh3.googleusercontent.com/aida/ADBb0ui2hWGRhlkulhwZr2jP2azK-Jhcb_WQE3A9n_w08pUSx5cpUVE-6ALFe2Ud3TaKy7OjAbNP9NaFYL9qImayJGUZmO3qhTTADEshCqs0Y-r-wFbCmekK_Ro3UJ-sngRRMYgeHVlXAUdIhO_UTOOiWyJ46FV10gJb3Z5076bFd1YED_AF2NOs4wMHM_UMVixV_k3uYWGZCTnz1a0ZuklRis46wsoaYtka7V1_4YzJTf57YT7ZweHpGLwNf1XH2n4NQ_S0_Etn9FC7fg";
+
+    let currentUserId = localStorage.getItem("tk2_current_session_id");
+    if (!currentUserId) {
+        currentUserId = 'user_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem("tk2_current_session_id", currentUserId);
+    }
+
+    document.getElementById("avatarInput").addEventListener("change", function(e){
+        const file = e.target.files[0];
+        if(!file) return;
+        if(!file.type.startsWith("image/")){
+            alert("กรุณาเลือกไฟล์รูปภาพ!");
+            return;
+        }
+        document.getElementById("fileName").textContent = file.name;
+        const reader = new FileReader();
+        reader.onload = function(){
+            imageBase64 = reader.result;
+            document.getElementById("preview").src = imageBase64;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    function checkSubmissionStatus() {
+        const users = JSON.parse(localStorage.getItem("tk2_users")) || [];
+        const hasSubmitted = users.some(u => u.sessionId === currentUserId);
+        const formElements = [document.querySelector('.mb-8:has(#avatarInput)'), document.querySelector('.space-y-6.mb-10'), document.getElementById('saveBtn')];
+        const statusMsg = document.getElementById('alreadyCheckedIn');
+
+        if (hasSubmitted) {
+            formElements.forEach(el => el && el.classList.add('hidden'));
+            statusMsg.classList.remove('hidden');
+        } else {
+            formElements.forEach(el => el && el.classList.remove('hidden'));
+            statusMsg.classList.add('hidden');
+        }
+    }
+
+    function loadUsers(){
+        const users = JSON.parse(localStorage.getItem("tk2_users")) || [];
+        const list = document.getElementById("userList");
+        const count = document.getElementById("countUser");
+        const emptyState = document.getElementById("emptyState");
+        
+        list.innerHTML = "";
+        
+        if(users.length === 0) {
+            list.appendChild(emptyState);
+            emptyState.style.display = "block";
+        } else {
+            emptyState.style.display = "none";
+            users.forEach(user => {
+                const isOwnEntry = user.sessionId === currentUserId;
+                const card = document.createElement("div");
+                
+                card.className = "flex items-center gap-4 p-4 bg-[#11111a] border-l-[4px] border-red-600 rounded-r-2xl rounded-l-sm animate-fade-in shadow-[0_10px_30px_rgba(0,0,0,0.5)] backdrop-blur-md relative overflow-hidden group border border-gray-800/40 hover:border-red-600/30 transition-all duration-300";
+                
+                card.innerHTML = `
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-red-600/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-red-600/10 transition-colors"></div>
+<div class="relative flex-shrink-0">
+<img class="w-14 h-14 rounded-full object-cover border-2 border-gray-800 group-hover:border-red-600/40 transition-colors shadow-lg" src="${user.image || defaultHeaderImage}"/>
+<div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-[3px] border-[#0d0d15]"></div>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-bold text-gray-100 text-[16px] truncate heading-font tracking-tight mb-0.5">${user.discord}</p>
+<div class="flex items-center gap-2">
+<span class="text-[9px] bg-red-950/40 text-red-400 px-1.5 py-0.5 rounded-sm border border-red-900/20 font-black uppercase tracking-widest flex items-center gap-1">MEMBER</span>
+<p class="text-[13px] text-gray-400 font-medium truncate opacity-70 tracking-wide font-body">${user.nickname} • ${user.age} ปี</p>
+</div>
+</div>
+                    ${isOwnEntry ? `
+                    <div class="flex gap-1 z-10">
+<button class="p-2 text-gray-500 hover:text-[#7c4dff] transition-colors active:scale-90" onclick="deleteUser('${user.id}')">
+<span class="material-symbols-outlined text-[20px]">delete_forever</span>
+</button>
+</div>
+                    ` : ''}
+                `;
+                list.appendChild(card);
+            });
+        }
+        if (count) count.textContent = users.length;
+        checkSubmissionStatus();
+    }
+
+    window.deleteUser = function(id) {
+        let users = JSON.parse(localStorage.getItem("tk2_users")) || [];
+        const user = users.find(u => u.id === id);
+        if (user && user.sessionId === currentUserId) {
+            if(confirm("ยืนยันการลบข้อมูลของคุณ? คุณสามารถเช็คชื่อใหม่ได้หลังจากการลบ")) {
+                users = users.filter(u => u.id !== id);
+                localStorage.setItem("tk2_users", JSON.stringify(users));
+                loadUsers();
+            }
+        }
+    };
+
+    document.getElementById("saveBtn").addEventListener("click", function(){
+        const idInput = document.getElementById("userId");
+        const discord = document.getElementById("discord").value.trim();
+        const nickname = document.getElementById("nickname").value.trim();
+        const age = document.getElementById("age").value;
+        
+        if(!discord || !nickname || !age){
+            alert("กรุณากรอกข้อมูลให้ครบถ้วน!");
+            return;
+        }
+        
+        let users = JSON.parse(localStorage.getItem("tk2_users")) || [];
+        
+        users.unshift({
+            id: Date.now().toString(),
+            sessionId: currentUserId,
+            discord,
+            nickname,
+            age,
+            image: imageBase64 || defaultHeaderImage
+        });
+        
+        localStorage.setItem("tk2_users", JSON.stringify(users));
+        
+        idInput.value = "";
+        document.getElementById("discord").value = "";
+        document.getElementById("nickname").value = "";
+        document.getElementById("age").value = "";
+        document.getElementById("fileName").textContent = "ยังไม่ได้เลือกไฟล์";
+        document.getElementById("preview").src = defaultHeaderImage;
+        imageBase64 = "";
+        
+        loadUsers();
+    });
+
+    window.filterUsers = function() {
+        const searchTerm = document.getElementById("searchInput").value.toLowerCase();
+        const users = JSON.parse(localStorage.getItem("tk2_users")) || [];
+        const list = document.getElementById("userList");
+        const cards = Array.from(list.children).filter(c => c.id !== "emptyState");
+
+        let hasResults = false;
+        
+        cards.forEach((card, index) => {
+            const user = users[index];
+            if (!user) return;
+
+            const match = user.discord.toLowerCase().includes(searchTerm) || 
+                          user.nickname.toLowerCase().includes(searchTerm);
+            
+            if (match) {
+                card.style.display = "flex";
+                hasResults = true;
+            } else {
+                card.style.display = "none";
+            }
+        });
+
+        const emptyState = document.getElementById("emptyState");
+        if (!hasResults && users.length > 0) {
+            emptyState.style.display = "block";
+            emptyState.querySelector('h3').textContent = "ไม่พบข้อมูลที่ค้นหา";
+            emptyState.querySelector('p').textContent = "ลองพิมพ์ชื่ออื่น หรือตรวจสอบตัวสะกด";
+        } else if (users.length === 0) {
+            emptyState.style.display = "block";
+            emptyState.querySelector('h3').textContent = "ยังไม่มีสมาชิกเช็คชื่อ";
+            emptyState.querySelector('p').textContent = "ร่วมเป็นส่วนหนึ่งของเซิร์ฟเวอร์โดยการลงทะเบียนด้านบน";
+        } else {
+            emptyState.style.display = "none";
+        }
+    };
+
+    loadUsers();
+</script>
+</body></html>
